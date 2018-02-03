@@ -1,37 +1,26 @@
 const express = require('express');
 const bodyparser = require('body-parser');
-// let pg = require('pg');
-const cors = require('cors')({ origin: true });
-const httpRequest = require('request');
-const url = require('url');
-const sms = require('./twilioAuth');
-var client = require('twilio')(
-    sms.TWILIO_ACCOUNT_SID,
-    sms.TWILIO_AUTH_TOKEN
-);
+const pg = require('pg');
+const pgConfig = require('./pgAuth');
+const router = require('./routes');
 
 const PORT = 3000;
+
+//configures postgres connection
+let pool = pg.Pool(pgConfig);
+exports.pool = pool;
+
+//Create express app
 let app = express();
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({
     extended: true
 }));
+//Use router middleware to connect different api route calls
+app.use('/api', router);
 
-app.post('/api/verifyPhoneNumber', (req, res) => {
-    cors(req, res, () => {
-        let phoneNumber = req.body.phoneNumber;
-        let verificationId = Math.floor(1000 + Math.random() * 9000);
-        client.messages.create({
-            from: sms.TWILIO_PHONE_NUMBER,
-            to: phoneNumber,
-            body: "Hi your verification number is " + verificationId
-        }).then((message) => {
-            res.send({ verificationId });
-        });
-    });
-});
-
+//Listens to given port
 app.listen(PORT, () => {
     console.log("Listening on PORT:" + PORT);
-    // console.log("Connected to PostgreSQL PORT: " + pgConfig.port);
+    console.log("Connected to PostgreSQL PORT: " + pgConfig.port);
 });
